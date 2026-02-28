@@ -48,6 +48,26 @@
             a significant amount of prop management. When we move to Vue 3 and have access to some of the newer API's the plan to update this
             data management and mutation system we're using.
           -->
+
+          <!-- Fork lineage badge -->
+          <div v-if="recipe.parentRecipeId" class="mb-3">
+            <v-chip
+              color="primary"
+              variant="tonal"
+              size="small"
+              :to="parentRecipeRoute"
+              prepend-icon="mdi-source-fork"
+            >
+              Forked from: {{ parentRecipeSummary?.name || "Original Recipe" }}
+            </v-chip>
+            <div
+              v-if="recipe.forkNote"
+              class="text-caption text-medium-emphasis mt-1 ml-1"
+            >
+              {{ recipe.forkNote }}
+            </div>
+          </div>
+
           <div>
             <RecipePageInfoEditor v-if="isEditMode" v-model="recipe" />
           </div>
@@ -225,6 +245,25 @@ const route = useRoute();
 const { isOwnGroup } = useLoggedInState();
 
 const groupSlug = computed(() => (route.params.groupSlug as string) || auth.user?.value?.groupSlug || "");
+
+// Fork lineage: resolve parent recipe slug from ID for the "Forked from" badge
+const parentRecipeSummary = ref<{ slug: string; name: string } | null>(null);
+const parentRecipeRoute = computed(() => {
+  if (!parentRecipeSummary.value) return undefined;
+  return `/g/${groupSlug.value}/r/${parentRecipeSummary.value.slug}`;
+});
+
+watchEffect(async () => {
+  const parentId = recipe.value.parentRecipeId;
+  if (!parentId) {
+    parentRecipeSummary.value = null;
+    return;
+  }
+  const { data } = await api.recipes.getOne(parentId);
+  if (data) {
+    parentRecipeSummary.value = { slug: data.slug ?? "", name: data.name ?? "" };
+  }
+});
 
 const router = useRouter();
 const api = useUserApi();

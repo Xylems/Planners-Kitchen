@@ -378,6 +378,10 @@ class RecipeService(RecipeServiceBase):
         )
         new_recipe.last_made = None
 
+        # Track fork lineage
+        new_recipe.parent_recipe_id = old_recipe.id
+        new_recipe.fork_note = dup_data.fork_note
+
         new_recipe = self._recipe_creation_factory(new_name, additional_attrs=new_recipe.model_dump())
 
         new_recipe = self.repos.recipes.create(new_recipe)

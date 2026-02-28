@@ -19,3 +19,4 @@ class UpdateImageResponse(BaseModel):
 
 class RecipeDuplicate(BaseModel):
     name: str | None = None
+    fork_note: str | None = None

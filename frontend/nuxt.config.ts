@@ -29,14 +29,14 @@ export default defineNuxtConfig({
     baseURL: process.env.SUB_PATH || "/",
 
     head: {
-      title: "Mealie",
+      title: "Planner's Kitchen",
       meta: [
         { property: "og:type", content: "website" },
-        { property: "og:title", content: "Mealie" },
-        { property: "og:site_name", content: "Mealie" },
+        { property: "og:title", content: "Planner's Kitchen" },
+        { property: "og:site_name", content: "Planner's Kitchen" },
         {
           property: "og:description",
-          content: "Mealie is a recipe management app for your kitchen.",
+          content: "Planner's Kitchen is a recipe management app for your kitchen.",
         },
         {
           property: "og:image",
@@ -47,7 +47,7 @@ export default defineNuxtConfig({
         { name: "viewport", content: "width=device-width, initial-scale=1" },
         {
           name: "description",
-          content: "Mealie is a recipe management app for your kitchen.",
+          content: "Planner's Kitchen is a recipe management app for your kitchen.",
         },
       ],
       link: [
@@ -80,22 +80,22 @@ export default defineNuxtConfig({
       useDark: Boolean(process.env.THEME_USE_DARK) || false,
       themes: {
         dark: {
-          primary: process.env.THEME_DARK_PRIMARY || "#E58325",
-          accent: process.env.THEME_DARK_ACCENT || "#007A99",
-          secondary: process.env.THEME_DARK_SECONDARY || "#973542",
+          primary: process.env.THEME_DARK_PRIMARY || "#7CB342",
+          accent: process.env.THEME_DARK_ACCENT || "#AED581",
+          secondary: process.env.THEME_DARK_SECONDARY || "#66BB6A",
           success: process.env.THEME_DARK_SUCCESS || "#43A047",
-          info: process.env.THEME_DARK_INFO || "#1976d2",
-          warning: process.env.THEME_DARK_WARNING || "#FF6D00",
+          info: process.env.THEME_DARK_INFO || "#1976D2",
+          warning: process.env.THEME_DARK_WARNING || "#F57F17",
           error: process.env.THEME_DARK_ERROR || "#EF5350",
           background: "#1E1E1E",
         },
         light: {
-          primary: process.env.THEME_LIGHT_PRIMARY || "#E58325",
-          accent: process.env.THEME_LIGHT_ACCENT || "#007A99",
-          secondary: process.env.THEME_LIGHT_SECONDARY || "#973542",
+          primary: process.env.THEME_LIGHT_PRIMARY || "#558B2F",
+          accent: process.env.THEME_LIGHT_ACCENT || "#8BC34A",
+          secondary: process.env.THEME_LIGHT_SECONDARY || "#4A7C59",
           success: process.env.THEME_LIGHT_SUCCESS || "#43A047",
-          info: process.env.THEME_LIGHT_INFO || "#1976d2",
-          warning: process.env.THEME_LIGHT_WARNING || "#FF6D00",
+          info: process.env.THEME_LIGHT_INFO || "#1976D2",
+          warning: process.env.THEME_LIGHT_WARNING || "#F57F17",
           error: process.env.THEME_LIGHT_ERROR || "#EF5350",
         },
       },
@@ -232,15 +232,15 @@ export default defineNuxtConfig({
     },
     includeAssets: ["favicon.ico", "apple-touch-icon.png", "safari-pinned-tab.svg"],
     manifest: {
-      name: "Mealie",
-      short_name: "Mealie",
+      name: "Planner's Kitchen",
+      short_name: "PK",
       id: "/",
       start_url: "/",
       scope: "/",
       display: "standalone",
       background_color: "#FFFFFF",
-      theme_color: process.env.THEME_LIGHT_PRIMARY || "#E58325",
-      description: "Mealie is a recipe management and meal planning app",
+      theme_color: process.env.THEME_LIGHT_PRIMARY || "#558B2F",
+      description: "Planner's Kitchen is a recipe management and meal planning app",
       lang: "en",
       display_override: [
         "standalone",

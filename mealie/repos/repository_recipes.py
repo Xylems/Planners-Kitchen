@@ -1,6 +1,6 @@
 import re as re
 from collections.abc import Iterable, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from random import randint
 from typing import Self, cast
 from uuid import UUID
@@ -12,6 +12,7 @@ from sqlalchemy import orm
 from sqlalchemy.exc import IntegrityError
 
 from mealie.db.models.household import Household, HouseholdToRecipe
+from mealie.db.models.household.pantry import PantryItem
 from mealie.db.models.recipe.category import Category
 from mealie.db.models.recipe.ingredient import RecipeIngredientModel, households_to_ingredient_foods
 from mealie.db.models.recipe.recipe import RecipeModel
@@ -365,6 +366,13 @@ class RepositoryRecipes(HouseholdRepositoryGeneric[Recipe, RecipeModel]):
         food_ids_with_on_hand = user_food_ids.copy()
         tool_ids_with_on_hand = user_tool_ids.copy()
 
+        # Resolve household_id for pantry queries
+        household_id = None
+        if self.user_id:
+            household_id = self.session.execute(
+                sa.select(User.household_id).filter(User.id == self.user_id)
+            ).scalar_one_or_none()
+
         if params.include_foods_on_hand and self.user_id:
             foods_on_hand_query = (
                 sa.select(households_to_ingredient_foods.c.food_id)
@@ -388,6 +396,18 @@ class RepositoryRecipes(HouseholdRepositoryGeneric[Recipe, RecipeModel]):
             )
             tools_on_hand = self.session.execute(tools_on_hand_query).scalars().all()
             tool_ids_with_on_hand.extend(tools_on_hand)
+
+        if params.include_pantry_items and household_id:
+            pantry_food_ids = self.session.execute(
+                sa.select(PantryItem.food_id).filter(
+                    PantryItem.household_id == str(household_id),
+                    PantryItem.food_id.is_not(None),
+                    PantryItem.is_out.is_(False),
+                )
+            ).scalars().all()
+            for fid in pantry_food_ids:
+                if fid not in food_ids_with_on_hand:
+                    food_ids_with_on_hand.append(fid)
 
         ## Build suggestion query
         settings_alias = orm.aliased(RecipeSettings)
@@ -452,6 +472,30 @@ class RepositoryRecipes(HouseholdRepositoryGeneric[Recipe, RecipeModel]):
             # only include recipes that have at least one food in the user's list
             if user_food_ids:
                 q = q.filter(total_user_foods_query.c.total_user_foods_count > 0)
+
+        ## Expiring-soon filter
+        if params.expiring_within_days is not None and household_id:
+            cutoff = date.today() + timedelta(days=params.expiring_within_days)
+            expiring_food_ids = self.session.execute(
+                sa.select(PantryItem.food_id).filter(
+                    PantryItem.household_id == str(household_id),
+                    PantryItem.food_id.is_not(None),
+                    PantryItem.is_out.is_(False),
+                    PantryItem.expiration_date.is_not(None),
+                    PantryItem.expiration_date <= cutoff,
+                )
+            ).scalars().all()
+            if expiring_food_ids:
+                q = q.filter(
+                    self.model.recipe_ingredient.any(
+                        RecipeIngredientModel.food_id.in_(expiring_food_ids)
+                    )
+                )
+                for fid in expiring_food_ids:
+                    if fid not in food_ids_with_on_hand:
+                        food_ids_with_on_hand.append(fid)
+            else:
+                return []
 
         ## Add filters and loader options
         if self.group_id:

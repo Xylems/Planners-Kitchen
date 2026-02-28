@@ -59,6 +59,8 @@ export interface UserRecipeFinderPreferences {
   maxMissingTools: number;
   includeFoodsOnHand: boolean;
   includeToolsOnHand: boolean;
+  includePantryItems: boolean;
+  expiringWithinDays: number | null;
 }
 
 export interface UserRecipeCreatePreferences {
@@ -220,6 +222,8 @@ export function useRecipeFinderPreferences(): Ref<UserRecipeFinderPreferences> {
       maxMissingTools: 20,
       includeFoodsOnHand: true,
       includeToolsOnHand: true,
+      includePantryItems: false,
+      expiringWithinDays: null,
     },
     { mergeDefaults: true },
     // we cast to a Ref because by default it will return an optional type ref

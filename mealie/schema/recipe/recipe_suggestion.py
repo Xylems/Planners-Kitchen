@@ -13,6 +13,9 @@ class RecipeSuggestionQuery(RequestQuery):
     include_foods_on_hand: bool = True
     include_tools_on_hand: bool = True
 
+    include_pantry_items: bool = False
+    expiring_within_days: int | None = None
+
 
 class RecipeSuggestionResponseItem(MealieModel):
     recipe: RecipeSummary

@@ -110,7 +110,7 @@ class IngredientFood(CreateIngredientFood):
             return v
 
     def is_on_hand(self, household_slug: str) -> bool:
-        return household_slug in self.households_with_tool
+        return household_slug in self.households_with_ingredient_food
 
 
 class IngredientFoodPagination(PaginationBase):

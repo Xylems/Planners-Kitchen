@@ -46,6 +46,26 @@
       elevation="2"
       type="list-item"
     />
+    <!-- Ingredient suggestions based on recently cooked recipes -->
+    <div v-if="suggestions.length > 0" class="my-3">
+      <p class="text-caption text-medium-emphasis mb-1">
+        Frequently used:
+      </p>
+      <div class="d-flex flex-wrap gap-1">
+        <v-chip
+          v-for="suggestion in suggestions"
+          :key="suggestion.id"
+          size="small"
+          variant="tonal"
+          color="primary"
+          class="cursor-pointer"
+          @click="addSuggestion(suggestion)"
+        >
+          {{ suggestion.name }}
+        </v-chip>
+      </div>
+    </div>
+
     <div class="d-flex flex-wrap justify-center justify-sm-end mt-3">
       <v-tooltip
         location="top"
@@ -135,10 +155,32 @@ import RecipeIngredientEditor from "~/components/Domain/Recipe/RecipeIngredientE
 import RecipeDialogBulkAdd from "~/components/Domain/Recipe/RecipeDialogBulkAdd.vue";
 import { usePageState } from "~/composables/recipe-page/shared-state";
 import { uuid4 } from "~/composables/use-utils";
+import { usePantryApi, type IngredientSuggestion } from "~/composables/api/use-pantry-api";
 
 const recipe = defineModel<NoUndefinedField<Recipe>>({ required: true });
 const ingredientsWithRecipe = new Map<string, boolean>();
 const i18n = useI18n();
+
+// Ingredient suggestions
+const pantryApi = usePantryApi();
+const suggestions = ref<IngredientSuggestion[]>([]);
+onMounted(async () => {
+  const { data } = await pantryApi.getIngredientSuggestions(8);
+  if (data) suggestions.value = data;
+});
+
+function addSuggestion(suggestion: IngredientSuggestion) {
+  recipe.value.recipeIngredient.push({
+    referenceId: uuid4(),
+    title: "",
+    note: suggestion.name,
+    // @ts-expect-error - prop can be null-type by NoUndefinedField type forces it to be set
+    unit: undefined,
+    // @ts-expect-error - prop can be null-type by NoUndefinedField type forces it to be set
+    food: undefined,
+    quantity: 0,
+  });
+}
 
 const drag = ref(false);
 const domBulkAddDialog = ref<InstanceType<typeof RecipeDialogBulkAdd> | null>(null);

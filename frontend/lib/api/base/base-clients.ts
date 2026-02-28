@@ -73,9 +73,10 @@ export abstract class BaseCRUDAPI<CreateType, ReadType, UpdateType = CreateType>
     return await this.requests.delete<ReadType>(this.itemRoute(itemId));
   }
 
-  async duplicateOne(itemId: string | number, newName: string | undefined) {
+  async duplicateOne(itemId: string | number, newName: string | undefined, forkNote?: string | undefined) {
     return await this.requests.post<Recipe>(`${this.itemRoute(itemId)}/duplicate`, {
       name: newName,
+      fork_note: forkNote ?? null,
     });
   }
 }

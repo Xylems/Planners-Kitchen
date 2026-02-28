@@ -36,7 +36,7 @@
             </div>
           </v-expand-transition>
         </RecipeCardImage>
-        <v-card-title class="mb-n3 px-4">
+        <v-card-title class="mb-n3 px-4 recipe-card-title">
           <div class="headerClass">
             {{ name }}
           </div>
@@ -122,7 +122,7 @@ const props = withDefaults(defineProps<Props>(), {
   ratingColor: "secondary",
   image: "abc123",
   tags: () => [],
-  imageHeight: 200,
+  imageHeight: 220,
 });
 
 defineEmits<{

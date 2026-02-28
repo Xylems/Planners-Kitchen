@@ -173,6 +173,27 @@
                           class="my-auto"
                           :label="$t('recipe-finder.include-tools-on-hand')"
                         />
+                        <v-checkbox
+                          v-if="isOwnGroup"
+                          v-model="settings.includePantryItems"
+                          density="compact"
+                          size="small"
+                          hide-details
+                          class="my-auto"
+                          label="Use my pantry"
+                        />
+                        <v-number-input
+                          v-if="isOwnGroup"
+                          v-model="settings.expiringWithinDays"
+                          :precision="null"
+                          :min="0"
+                          control-variant="stacked"
+                          inset
+                          hide-details
+                          clearable
+                          label="Expiring within (days)"
+                          class="mt-4"
+                        />
                       </div>
                     </v-card-text>
                   </v-card>
@@ -465,6 +486,8 @@ export default defineNuxtComponent({
         maxMissingTools: preferences.value.maxMissingTools,
         includeFoodsOnHand: preferences.value.includeFoodsOnHand,
         includeToolsOnHand: preferences.value.includeToolsOnHand,
+        includePantryItems: preferences.value.includePantryItems,
+        expiringWithinDays: preferences.value.expiringWithinDays,
         queryFilter: preferences.value.queryFilter,
         limit: 20,
       },
@@ -486,6 +509,8 @@ export default defineNuxtComponent({
         preferences.value.maxMissingTools = newState.settings.maxMissingTools;
         preferences.value.includeFoodsOnHand = newState.settings.includeFoodsOnHand;
         preferences.value.includeToolsOnHand = newState.settings.includeToolsOnHand;
+        preferences.value.includePantryItems = newState.settings.includePantryItems;
+        preferences.value.expiringWithinDays = newState.settings.expiringWithinDays;
       },
       {
         deep: true,
@@ -585,9 +610,10 @@ export default defineNuxtComponent({
     onMounted(async () => {
       await Promise.all([hydrateFoods(), hydrateTools()]);
       state.ready = true;
-      if (!selectedFoods.value.length) {
+      const hasPantryFilter = state.settings.includePantryItems || state.settings.expiringWithinDays != null;
+      if (!selectedFoods.value.length && !hasPantryFilter) {
         state.recipesReady = true;
-      };
+      }
     });
 
     const recipeResponseItems = ref<RecipeSuggestionResponseItem[]>([]);
@@ -611,8 +637,9 @@ export default defineNuxtComponent({
 
     watchDebounced(
       [selectedFoods, selectedTools, state.settings], async () => {
-        // don't search for suggestions if no foods are selected
-        if (!selectedFoods.value.length) {
+        // don't search for suggestions if no foods are selected AND no pantry/expiring filter is active
+        const hasPantryFilter = state.settings.includePantryItems || state.settings.expiringWithinDays != null;
+        if (!selectedFoods.value.length && !hasPantryFilter) {
           recipeResponseItems.value = [];
           state.recipesReady = true;
           return;
@@ -627,6 +654,8 @@ export default defineNuxtComponent({
             maxMissingTools: state.settings.maxMissingTools,
             includeFoodsOnHand: state.settings.includeFoodsOnHand,
             includeToolsOnHand: state.settings.includeToolsOnHand,
+            includePantryItems: state.settings.includePantryItems,
+            expiringWithinDays: state.settings.expiringWithinDays ?? undefined,
           } as RecipeSuggestionQuery,
           selectedFoods.value.map(food => food.id),
           selectedTools.value.map(tool => tool.id),

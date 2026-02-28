@@ -37,10 +37,12 @@ from mealie.db.models.recipe.tool import Tool
 from mealie.db.models.users import LongLiveToken, User
 from mealie.db.models.users.password_reset import PasswordResetModel
 from mealie.db.models.users.user_to_recipe import UserToRecipe
+from mealie.db.models.household.pantry import PantryItem
 from mealie.repos.repository_cookbooks import RepositoryCookbooks
 from mealie.repos.repository_foods import RepositoryFood
 from mealie.repos.repository_household import RepositoryHousehold, RepositoryHouseholdRecipes
 from mealie.repos.repository_meal_plan_rules import RepositoryMealPlanRules
+from mealie.repos.repository_pantry import RepositoryPantry
 from mealie.repos.repository_units import RepositoryUnit
 from mealie.schema.cookbook.cookbook import ReadCookBook
 from mealie.schema.group.group_exports import GroupDataExport
@@ -55,6 +57,7 @@ from mealie.schema.household.group_shopping_list import (
     ShoppingListRecipeRefOut,
 )
 from mealie.schema.household.household import HouseholdInDB, HouseholdRecipeOut
+from mealie.schema.household.pantry import PantryItemRead
 from mealie.schema.household.household_preferences import ReadHouseholdPreferences
 from mealie.schema.household.invite_token import ReadInviteToken
 from mealie.schema.household.webhook import ReadWebhook
@@ -361,6 +364,20 @@ class AllRepositories:
     def group_multi_purpose_labels(self) -> GroupRepositoryGeneric[MultiPurposeLabelOut, MultiPurposeLabel]:
         return GroupRepositoryGeneric(
             self.session, PK_ID, MultiPurposeLabel, MultiPurposeLabelOut, group_id=self.group_id
+        )
+
+    # ================================================================
+    # Pantry
+
+    @cached_property
+    def pantry(self) -> RepositoryPantry:
+        return RepositoryPantry(
+            self.session,
+            PK_ID,
+            PantryItem,
+            PantryItemRead,
+            group_id=self.group_id,
+            household_id=self.household_id,
         )
 
     # ================================================================

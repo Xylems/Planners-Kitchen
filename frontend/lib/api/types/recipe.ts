@@ -395,6 +395,8 @@ export interface RecipeSuggestionQuery {
   maxMissingTools?: number;
   includeFoodsOnHand?: boolean;
   includeToolsOnHand?: boolean;
+  includePantryItems?: boolean;
+  expiringWithinDays?: number | null;
 }
 export interface RecipeSuggestionResponse {
   items: RecipeSuggestionResponseItem[];

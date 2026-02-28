@@ -36,6 +36,33 @@
       />
     </v-card-text>
   </BaseDialog>
+
+  <!-- Fork Recipe Dialog -->
+  <BaseDialog
+    v-model="recipeForkDialog"
+    title="Fork Recipe"
+    color="primary"
+    :icon="$globals.icons.duplicate"
+    can-confirm
+    @confirm="forkRecipe()"
+  >
+    <v-card-text>
+      <v-text-field
+        v-model="forkName"
+        density="compact"
+        label="New recipe name"
+        class="mb-3"
+        autofocus
+      />
+      <v-textarea
+        v-model="forkNote"
+        density="compact"
+        label="What did you change? (optional)"
+        rows="2"
+        auto-grow
+      />
+    </v-card-text>
+  </BaseDialog>
   <BaseDialog
     v-model="mealplannerDialog"
     :title="$t('recipe.add-recipe-to-mealplan')"
@@ -120,6 +147,7 @@ export interface ContextMenuIncludes {
   edit: boolean;
   download: boolean;
   duplicate: boolean;
+  fork: boolean;
   mealplanner: boolean;
   shoppingList: boolean;
   print: boolean;
@@ -156,6 +184,7 @@ const props = withDefaults(defineProps<Props>(), {
     edit: true,
     download: true,
     duplicate: false,
+    fork: true,
     mealplanner: true,
     shoppingList: true,
     print: true,
@@ -187,7 +216,10 @@ const recipeDeleteDialog = ref(false);
 const mealplannerDialog = ref(false);
 const shoppingListDialog = ref(false);
 const recipeDuplicateDialog = ref(false);
+const recipeForkDialog = ref(false);
 const recipeName = ref(props.name);
+const forkName = ref(`Copy of ${props.name}`);
+const forkNote = ref("");
 const loading = ref(false);
 const menuItems = ref<ContextMenuItem[]>([]);
 const newMealdate = ref(new Date());
@@ -279,6 +311,13 @@ const defaultItems: { [key: string]: ContextMenuItem } = {
     icon: $globals.icons.shareVariant,
     color: undefined,
     event: "share",
+    isPublic: false,
+  },
+  fork: {
+    title: "Fork Recipe",
+    icon: $globals.icons.duplicate,
+    color: "primary",
+    event: "fork",
     isPublic: false,
   },
 };
@@ -395,6 +434,17 @@ async function duplicateRecipe() {
   }
 }
 
+async function forkRecipe() {
+  const { data } = await api.recipes.duplicateOne(
+    props.slug,
+    forkName.value || `Copy of ${props.name}`,
+    forkNote.value || undefined,
+  );
+  if (data && data.slug) {
+    router.push(`/g/${groupSlug.value}/r/${data.slug}`);
+  }
+}
+
 // Note: Print is handled as an event in the parent component
 // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
 const eventHandlers: { [key: string]: () => void | Promise<any> } = {
@@ -427,6 +477,11 @@ const eventHandlers: { [key: string]: () => void | Promise<any> } = {
   },
   share: () => {
     shareDialog.value = true;
+  },
+  fork: () => {
+    forkName.value = `Copy of ${props.name}`;
+    forkNote.value = "";
+    recipeForkDialog.value = true;
   },
 };
 
