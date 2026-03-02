@@ -173,36 +173,90 @@
                           class="my-auto"
                           :label="$t('recipe-finder.include-tools-on-hand')"
                         />
-                        <v-checkbox
-                          v-if="isOwnGroup"
-                          v-model="settings.includePantryItems"
-                          density="compact"
-                          size="small"
-                          hide-details
-                          class="my-auto"
-                          label="Use my pantry"
-                        />
-                        <v-number-input
-                          v-if="isOwnGroup"
-                          v-model="settings.expiringWithinDays"
-                          :precision="null"
-                          :min="0"
-                          control-variant="stacked"
-                          inset
-                          hide-details
-                          clearable
-                          label="Expiring within (days)"
-                          class="mt-4"
-                        />
                       </div>
                     </v-card-text>
                   </v-card>
                 </v-menu>
               </v-col>
             </v-row>
+
+            <!-- Pantry Items Panel -->
+            <v-row
+              v-if="isOwnGroup && pantryFoods.length > 0"
+              no-gutters
+              class="mt-3"
+            >
+              <v-col cols="12">
+                <v-divider class="mb-3" />
+                <div class="d-flex align-center mb-2">
+                  <v-icon start size="small" color="primary">
+                    {{ $globals.icons.pantry }}
+                  </v-icon>
+                  <span class="text-body-2 font-weight-bold flex-grow-1">Pantry</span>
+                  <v-btn
+                    size="x-small"
+                    variant="text"
+                    color="primary"
+                    class="px-1"
+                    @click="selectAllPantry"
+                  >
+                    All
+                  </v-btn>
+                  <v-btn
+                    size="x-small"
+                    variant="text"
+                    color="grey"
+                    class="px-1"
+                    @click="clearPantrySelection"
+                  >
+                    Clear
+                  </v-btn>
+                </div>
+
+                <!-- Expiring soon toggle -->
+                <v-checkbox
+                  v-model="useExpiringItems"
+                  density="compact"
+                  hide-details
+                  color="warning"
+                  class="mb-2"
+                >
+                  <template #label>
+                    <span class="text-caption">
+                      <v-icon size="x-small" color="warning" class="mr-1">{{ $globals.icons.clockOutline }}</v-icon>
+                      Expiring soon (7 days)
+                    </span>
+                  </template>
+                </v-checkbox>
+
+                <!-- Pantry food chips -->
+                <div class="d-flex flex-wrap ga-1">
+                  <v-chip
+                    v-for="food in pantryFoods"
+                    :key="food.id"
+                    :color="pantrySelectedIdSet.has(food.id) ? 'primary' : (expiringPantryIds.has(food.id) ? 'warning' : undefined)"
+                    :variant="pantrySelectedIdSet.has(food.id) ? 'flat' : 'outlined'"
+                    label
+                    size="small"
+                    style="cursor: pointer;"
+                    @click="togglePantryFood(food)"
+                  >
+                    {{ food.name }}
+                    <v-icon
+                      v-if="expiringPantryIds.has(food.id)"
+                      end
+                      size="x-small"
+                    >
+                      {{ $globals.icons.clockOutline }}
+                    </v-icon>
+                  </v-chip>
+                </div>
+              </v-col>
+            </v-row>
+
             <v-row
               no-gutters
-              class="my-2"
+              class="my-2 mt-3"
             >
               <v-col cols="12">
                 <v-divider />
@@ -236,11 +290,12 @@
                         :key="food.id"
                         label
                         class="ma-1"
-                        color="accent custom-transparent"
+                        :color="pantrySelectedIdSet.has(food.id) ? 'primary custom-transparent' : 'accent custom-transparent'"
                         closable
                         variant="flat"
                         @click:close="removeFood(food)"
                       >
+                        <v-icon v-if="pantrySelectedIdSet.has(food.id)" start size="x-small">{{ $globals.icons.pantry }}</v-icon>
                         <span class="text-hide-overflow">{{ food.pluralName || food.name }}</span>
                       </v-chip>
                     </v-col>
@@ -256,11 +311,12 @@
                     <v-col cols="12">
                       <v-chip
                         label
-                        color="accent custom-transparent"
+                        :color="pantrySelectedIdSet.has(food.id) ? 'primary custom-transparent' : 'accent custom-transparent'"
                         variant="flat"
                         closable
                         @click:close="removeFood(food)"
                       >
+                        <v-icon v-if="pantrySelectedIdSet.has(food.id)" start size="x-small">{{ $globals.icons.pantry }}</v-icon>
                         <span class="text-hide-overflow">{{ food.pluralName || food.name }}</span>
                       </v-chip>
                     </v-col>
@@ -350,6 +406,7 @@
                     :missing-foods="item.missingFoods"
                     :missing-tools="item.missingTools"
                     :disable-checkbox="loading"
+                    :pantry-food-ids="pantrySelectedIdSet"
                     @add-food="addFood"
                     @remove-food="removeFood"
                     @add-tool="addTool"
@@ -378,6 +435,7 @@
                     :missing-foods="item.missingFoods"
                     :missing-tools="item.missingTools"
                     :disable-checkbox="loading"
+                    :pantry-food-ids="pantrySelectedIdSet"
                     @add-food="addFood"
                     @remove-food="removeFood"
                     @add-tool="addTool"
@@ -446,6 +504,10 @@ import SearchFilter from "~/components/Domain/SearchFilter.vue";
 import type { QueryFilterJSON } from "~/lib/api/types/non-generated";
 import type { FieldDefinition } from "~/composables/use-query-filter-builder";
 import { useRecipeFinderPreferences } from "~/composables/use-users/preferences";
+import { usePantryApi } from "~/composables/api/use-pantry-api";
+import type { PantryItem } from "~/composables/api/use-pantry-api";
+
+const EXPIRY_DAYS = 7;
 
 interface RecipeSuggestions {
   readyToMake: RecipeSuggestionResponseItem[];
@@ -469,6 +531,7 @@ export default defineNuxtComponent({
     const groupSlug = computed(() => route.params.groupSlug as string || auth.user.value?.groupSlug || "");
     const { isOwnGroup } = useLoggedInState();
     const api = isOwnGroup.value ? useUserApi() : usePublicExploreApi(groupSlug.value).explore;
+    const pantryApi = isOwnGroup.value ? usePantryApi() : null;
 
     const preferences = useRecipeFinderPreferences();
     const state = reactive({
@@ -486,8 +549,6 @@ export default defineNuxtComponent({
         maxMissingTools: preferences.value.maxMissingTools,
         includeFoodsOnHand: preferences.value.includeFoodsOnHand,
         includeToolsOnHand: preferences.value.includeToolsOnHand,
-        includePantryItems: preferences.value.includePantryItems,
-        expiringWithinDays: preferences.value.expiringWithinDays,
         queryFilter: preferences.value.queryFilter,
         limit: 20,
       },
@@ -509,12 +570,8 @@ export default defineNuxtComponent({
         preferences.value.maxMissingTools = newState.settings.maxMissingTools;
         preferences.value.includeFoodsOnHand = newState.settings.includeFoodsOnHand;
         preferences.value.includeToolsOnHand = newState.settings.includeToolsOnHand;
-        preferences.value.includePantryItems = newState.settings.includePantryItems;
-        preferences.value.expiringWithinDays = newState.settings.expiringWithinDays;
       },
-      {
-        deep: true,
-      },
+      { deep: true },
     );
 
     const attrs = computed(() => {
@@ -535,9 +592,11 @@ export default defineNuxtComponent({
       };
     });
 
+    // ── Foods ──────────────────────────────────────────────────────────────
     const foodStore = isOwnGroup.value ? useFoodStore() : usePublicFoodStore(groupSlug.value);
     const selectedFoods = ref<IngredientFood[]>([]);
     function addFood(food: IngredientFood) {
+      if (selectedFoods.value.find(f => f.id === food.id)) return;
       selectedFoods.value = [...selectedFoods.value, food];
       handleFoodUpdates();
     }
@@ -549,13 +608,9 @@ export default defineNuxtComponent({
       selectedFoods.value.sort((a, b) => (a.pluralName || a.name).localeCompare(b.pluralName || b.name));
       preferences.value.foodIds = selectedFoods.value.map(food => food.id);
     }
-    watch(
-      () => selectedFoods.value,
-      () => {
-        handleFoodUpdates();
-      },
-    );
+    watch(() => selectedFoods.value, () => { handleFoodUpdates(); });
 
+    // ── Tools ──────────────────────────────────────────────────────────────
     const toolStore = isOwnGroup.value ? useToolStore() : usePublicToolStore(groupSlug.value);
     const selectedTools = ref<RecipeTool[]>([]);
     function addTool(tool: RecipeTool) {
@@ -570,52 +625,132 @@ export default defineNuxtComponent({
       selectedTools.value.sort((a, b) => a.name.localeCompare(b.name));
       preferences.value.toolIds = selectedTools.value.map(tool => tool.id);
     }
-    watch(
-      () => selectedTools.value,
-      () => {
-        handleToolUpdates();
-      },
-    );
+    watch(() => selectedTools.value, () => { handleToolUpdates(); });
 
-    async function hydrateFoods() {
-      if (!preferences.value.foodIds.length) {
-        return;
+    // ── Pantry ─────────────────────────────────────────────────────────────
+    const pantryItems = ref<PantryItem[]>([]);
+    const pantrySelectedIds = ref<string[]>([]);
+    const useExpiringItems = ref(false);
+
+    // In-stock pantry items with a food link, deduped by food_id
+    const pantryFoods = computed<IngredientFood[]>(() => {
+      const seen = new Set<string>();
+      const result: IngredientFood[] = [];
+      for (const item of pantryItems.value) {
+        if (!item.foodId || item.isOut || seen.has(item.foodId)) continue;
+        seen.add(item.foodId);
+        result.push({
+          id: item.foodId,
+          name: item.name,
+          pluralName: item.name,
+          description: "",
+          aliases: [],
+          householdsWithIngredientFood: [],
+        });
       }
+      return result;
+    });
+
+    // Food IDs expiring within EXPIRY_DAYS
+    const expiringPantryIds = computed<Set<string>>(() => {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() + EXPIRY_DAYS);
+      const ids = new Set<string>();
+      for (const item of pantryItems.value) {
+        if (!item.foodId || item.isOut || !item.expirationDate) continue;
+        if (new Date(item.expirationDate) <= cutoff) ids.add(item.foodId);
+      }
+      return ids;
+    });
+
+    // Reactive Set for template and RecipeSuggestion
+    const pantrySelectedIdSet = computed<Set<string>>(() => new Set(pantrySelectedIds.value));
+
+    function togglePantryFood(food: IngredientFood) {
+      if (pantrySelectedIds.value.includes(food.id)) {
+        pantrySelectedIds.value = pantrySelectedIds.value.filter(id => id !== food.id);
+        removeFood(food);
+      }
+      else {
+        pantrySelectedIds.value = [...pantrySelectedIds.value, food.id];
+        addFood(food);
+      }
+    }
+
+    function selectAllPantry() {
+      for (const food of pantryFoods.value) {
+        if (!pantrySelectedIds.value.includes(food.id)) {
+          pantrySelectedIds.value = [...pantrySelectedIds.value, food.id];
+          addFood(food);
+        }
+      }
+    }
+
+    function clearPantrySelection() {
+      for (const id of pantrySelectedIds.value) {
+        const food = pantryFoods.value.find(f => f.id === id);
+        if (food) removeFood(food);
+      }
+      pantrySelectedIds.value = [];
+      useExpiringItems.value = false;
+    }
+
+    // When "Expiring soon" is toggled, auto-select/deselect expiring pantry foods
+    watch(useExpiringItems, (enabled) => {
+      const expiring = pantryFoods.value.filter(f => expiringPantryIds.value.has(f.id));
+      if (enabled) {
+        for (const food of expiring) {
+          if (!pantrySelectedIds.value.includes(food.id)) {
+            pantrySelectedIds.value = [...pantrySelectedIds.value, food.id];
+            addFood(food);
+          }
+        }
+      }
+      else {
+        // Only remove foods that were selected via the expiring toggle (not manually selected from pantry)
+        for (const food of expiring) {
+          pantrySelectedIds.value = pantrySelectedIds.value.filter(id => id !== food.id);
+          removeFood(food);
+        }
+      }
+    });
+
+    // ── Hydration & mount ──────────────────────────────────────────────────
+    async function hydrateFoods() {
+      if (!preferences.value.foodIds.length) return;
       if (!foodStore.store.value.length) {
         await foodStore.actions.refresh();
       }
-
-      const foods = preferences.value.foodIds
+      selectedFoods.value = preferences.value.foodIds
         .map(foodId => foodStore.store.value.find(food => food.id === foodId))
         .filter(food => !!food);
-
-      selectedFoods.value = foods;
     }
 
     async function hydrateTools() {
-      if (!preferences.value.toolIds.length) {
-        return;
-      }
+      if (!preferences.value.toolIds.length) return;
       if (!toolStore.store.value.length) {
         await toolStore.actions.refresh();
       }
-
-      const tools = preferences.value.toolIds
+      selectedTools.value = preferences.value.toolIds
         .map(toolId => toolStore.store.value.find(tool => tool.id === toolId))
         .filter(tool => !!tool);
+    }
 
-      selectedTools.value = tools;
+    async function loadPantryItems() {
+      if (!pantryApi) return;
+      const { data } = await pantryApi.getPantryItems();
+      pantryItems.value = data || [];
     }
 
     onMounted(async () => {
-      await Promise.all([hydrateFoods(), hydrateTools()]);
+      await Promise.all([hydrateFoods(), hydrateTools(), loadPantryItems()]);
       state.ready = true;
-      const hasPantryFilter = state.settings.includePantryItems || state.settings.expiringWithinDays != null;
-      if (!selectedFoods.value.length && !hasPantryFilter) {
+      if (!selectedFoods.value.length) {
         state.recipesReady = true;
       }
     });
 
+    // ── Suggestions query ──────────────────────────────────────────────────
     const recipeResponseItems = ref<RecipeSuggestionResponseItem[]>([]);
     const recipeSuggestions = computed<RecipeSuggestions>(() => {
       const readyToMake: RecipeSuggestionResponseItem[] = [];
@@ -626,20 +761,15 @@ export default defineNuxtComponent({
         }
         else {
           missingItems.push(responseItem);
-        };
+        }
       });
-
-      return {
-        readyToMake,
-        missingItems,
-      };
+      return { readyToMake, missingItems };
     });
 
     watchDebounced(
-      [selectedFoods, selectedTools, state.settings], async () => {
-        // don't search for suggestions if no foods are selected AND no pantry/expiring filter is active
-        const hasPantryFilter = state.settings.includePantryItems || state.settings.expiringWithinDays != null;
-        if (!selectedFoods.value.length && !hasPantryFilter) {
+      [selectedFoods, selectedTools, pantrySelectedIds, state.settings],
+      async () => {
+        if (!selectedFoods.value.length) {
           recipeResponseItems.value = [];
           state.recipesReady = true;
           return;
@@ -654,50 +784,25 @@ export default defineNuxtComponent({
             maxMissingTools: state.settings.maxMissingTools,
             includeFoodsOnHand: state.settings.includeFoodsOnHand,
             includeToolsOnHand: state.settings.includeToolsOnHand,
-            includePantryItems: state.settings.includePantryItems,
-            expiringWithinDays: state.settings.expiringWithinDays ?? undefined,
           } as RecipeSuggestionQuery,
           selectedFoods.value.map(food => food.id),
           selectedTools.value.map(tool => tool.id),
         );
         state.loading = false;
-        if (!data) {
-          return;
-        }
+        if (!data) return;
         recipeResponseItems.value = data.items;
         state.recipesReady = true;
       },
-      {
-        debounce: 500,
-      },
+      { debounce: 500 },
     );
 
+    // ── Query filter ───────────────────────────────────────────────────────
     const queryFilterBuilderFields: FieldDefinition[] = [
-      {
-        name: "recipe_category.id",
-        label: i18n.t("category.categories"),
-        type: Organizer.Category,
-      },
-      {
-        name: "tags.id",
-        label: i18n.t("tag.tags"),
-        type: Organizer.Tag,
-      },
-      {
-        name: "household_id",
-        label: i18n.t("household.households"),
-        type: Organizer.Household,
-      },
-      {
-        name: "user_id",
-        label: i18n.t("user.users"),
-        type: Organizer.User,
-      },
-      {
-        name: "last_made",
-        label: i18n.t("general.last-made"),
-        type: "relativeDate",
-      },
+      { name: "recipe_category.id", label: i18n.t("category.categories"), type: Organizer.Category },
+      { name: "tags.id", label: i18n.t("tag.tags"), type: Organizer.Tag },
+      { name: "household_id", label: i18n.t("household.households"), type: Organizer.Household },
+      { name: "user_id", label: i18n.t("user.users"), type: Organizer.User },
+      { name: "last_made", label: i18n.t("general.last-made"), type: "relativeDate" },
     ];
 
     function clearQueryFilter() {
@@ -728,6 +833,15 @@ export default defineNuxtComponent({
       selectedTools,
       addTool,
       removeTool,
+      // Pantry
+      pantryFoods,
+      expiringPantryIds,
+      pantrySelectedIdSet,
+      useExpiringItems,
+      togglePantryFood,
+      selectAllPantry,
+      clearPantrySelection,
+      // Suggestions
       recipeSuggestions,
       queryFilterBuilderFields,
       clearQueryFilter,

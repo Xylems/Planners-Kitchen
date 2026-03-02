@@ -11,6 +11,12 @@
           :recipe-id="recipe.id"
         />
       </v-col>
+      <v-col v-if="pantryMatchCount > 0" cols="12" class="pt-1">
+        <v-chip color="success" size="small" variant="tonal">
+          <v-icon start size="small">{{ $globals.icons.pantry }}</v-icon>
+          {{ pantryMatchCount }} pantry {{ pantryMatchCount === 1 ? "item" : "items" }} on hand
+        </v-chip>
+      </v-col>
       <div v-for="(organizer, idx) in missingOrganizers" :key="idx">
         <v-col v-if="organizer.show" cols="12">
           <div class="d-flex flex-row flex-wrap align-center pt-2">
@@ -54,11 +60,13 @@ interface Props {
   missingFoods?: IngredientFood[] | null;
   missingTools?: RecipeTool[] | null;
   disableCheckbox?: boolean;
+  pantryFoodIds?: Set<string> | null;
 }
 const props = withDefaults(defineProps<Props>(), {
   missingFoods: null,
   missingTools: null,
   disableCheckbox: false,
+  pantryFoodIds: null,
 });
 
 const emit = defineEmits<{
@@ -69,6 +77,12 @@ const emit = defineEmits<{
 }>();
 
 const { $globals } = useNuxtApp();
+
+const pantryMatchCount = computed(() => {
+  if (!props.pantryFoodIds?.size) return 0;
+  const missingIds = new Set(props.missingFoods?.map((f) => f.id) ?? []);
+  return [...props.pantryFoodIds].filter((id) => !missingIds.has(id)).length;
+});
 const missingOrganizers = computed(() => [
   {
     type: "food",
