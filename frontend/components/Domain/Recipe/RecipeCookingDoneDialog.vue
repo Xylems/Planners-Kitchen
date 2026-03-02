@@ -1,7 +1,7 @@
 <template>
   <v-dialog
     :model-value="modelValue"
-    max-width="560"
+    max-width="580"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <v-card>
@@ -22,69 +22,162 @@
         >
           No food ingredients found for this recipe.
         </div>
-        <v-list
-          v-else
-          density="compact"
-        >
-          <v-list-item
-            v-for="ingredient in ingredients"
-            :key="ingredient.referenceId || ingredient.foodName"
-            class="px-0"
-          >
-            <template #default>
-              <div class="py-2">
-                <!-- Food name + recipe quantity -->
-                <div class="d-flex align-center mb-1">
-                  <span class="text-body-2 font-weight-medium">{{ ingredient.foodName }}</span>
-                  <span
-                    v-if="ingredient.quantity || ingredient.unit"
-                    class="text-caption text-medium-emphasis ml-2"
-                  >
-                    (recipe: {{ ingredient.quantity ?? "" }} {{ ingredient.unit ?? "" }})
-                  </span>
-                </div>
 
-                <!-- Remaining quantity row -->
-                <div class="d-flex align-center gap-2">
-                  <v-text-field
-                    v-model.number="depletions[ingredient.foodId || ingredient.referenceId].quantity"
-                    type="number"
-                    min="0"
-                    density="compact"
-                    variant="outlined"
-                    hide-details
-                    label="Remaining"
-                    style="max-width: 120px;"
-                  />
-                  <span
-                    v-if="ingredient.unit"
-                    class="text-body-2 text-medium-emphasis"
-                    style="min-width: 48px;"
-                  >{{ ingredient.unit }}</span>
+        <template v-else>
+          <!-- ── Existing pantry items ── -->
+          <template v-if="existingIngredients.length > 0">
+            <div class="text-overline text-medium-emphasis mb-1">
+              In Your Pantry
+            </div>
+            <v-list density="compact">
+              <v-list-item
+                v-for="ingredient in existingIngredients"
+                :key="ingredient.referenceId || ingredient.foodId"
+                class="px-0"
+              >
+                <template #default>
+                  <div class="py-2">
+                    <div class="d-flex align-center mb-1">
+                      <span class="text-body-2 font-weight-medium">{{ ingredient.foodName }}</span>
+                      <span
+                        v-if="ingredient.quantity || ingredient.unit"
+                        class="text-caption text-medium-emphasis ml-2"
+                      >
+                        (recipe: {{ ingredient.quantity ?? "" }} {{ ingredient.unit ?? "" }})
+                      </span>
+                    </div>
+                    <div class="d-flex align-center gap-2 flex-wrap">
+                      <v-text-field
+                        v-model.number="depletions[ingredient.foodId!].quantity"
+                        type="number"
+                        min="0"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        label="Remaining"
+                        style="max-width: 110px;"
+                      />
+                      <span
+                        v-if="ingredient.unit"
+                        class="text-body-2 text-medium-emphasis"
+                        style="min-width: 40px;"
+                      >{{ ingredient.unit }}</span>
+                      <v-text-field
+                        v-model="depletions[ingredient.foodId!].expirationDate"
+                        type="date"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        label="Expiry date"
+                        style="max-width: 160px;"
+                      />
+                      <v-btn-toggle
+                        v-model="depletions[ingredient.foodId!].status"
+                        density="compact"
+                        variant="outlined"
+                        color="primary"
+                        mandatory
+                        class="ml-auto"
+                      >
+                        <v-btn value="ok" size="small">OK</v-btn>
+                        <v-btn value="low" size="small" color="warning">Low</v-btn>
+                        <v-btn value="out" size="small" color="error">Out</v-btn>
+                      </v-btn-toggle>
+                    </div>
+                  </div>
+                </template>
+              </v-list-item>
+            </v-list>
+          </template>
 
-                  <v-btn-toggle
-                    v-model="depletions[ingredient.foodId || ingredient.referenceId].status"
-                    density="compact"
-                    variant="outlined"
-                    color="primary"
-                    mandatory
-                    class="ml-auto"
-                  >
-                    <v-btn value="ok" size="small">
-                      OK
-                    </v-btn>
-                    <v-btn value="low" size="small" color="warning">
-                      Low
-                    </v-btn>
-                    <v-btn value="out" size="small" color="error">
-                      Out
-                    </v-btn>
-                  </v-btn-toggle>
-                </div>
-              </div>
-            </template>
-          </v-list-item>
-        </v-list>
+          <!-- ── New items (not yet in pantry) ── -->
+          <template v-if="newIngredients.length > 0">
+            <v-divider v-if="existingIngredients.length > 0" class="my-3" />
+            <div class="d-flex align-center gap-1 text-overline text-medium-emphasis mb-1">
+              <v-icon size="small" color="primary">{{ $globals.icons.plus }}</v-icon>
+              New to Pantry
+            </div>
+            <v-list density="compact">
+              <v-list-item
+                v-for="ingredient in newIngredients"
+                :key="ingredient.referenceId || ingredient.foodId"
+                class="px-0"
+              >
+                <template #default>
+                  <div class="py-2">
+                    <div class="d-flex align-center mb-2">
+                      <span class="text-body-2 font-weight-medium">{{ ingredient.foodName }}</span>
+                      <span
+                        v-if="ingredient.quantity || ingredient.unit"
+                        class="text-caption text-medium-emphasis ml-2"
+                      >
+                        (recipe: {{ ingredient.quantity ?? "" }} {{ ingredient.unit ?? "" }})
+                      </span>
+                    </div>
+                    <!-- Row 1: qty + unit + expiry + status -->
+                    <div class="d-flex align-center gap-2 flex-wrap mb-2">
+                      <v-text-field
+                        v-model.number="depletions[ingredient.foodId!].quantity"
+                        type="number"
+                        min="0"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        label="Remaining"
+                        style="max-width: 110px;"
+                      />
+                      <span
+                        v-if="ingredient.unit"
+                        class="text-body-2 text-medium-emphasis"
+                        style="min-width: 40px;"
+                      >{{ ingredient.unit }}</span>
+                      <v-text-field
+                        v-model="depletions[ingredient.foodId!].expirationDate"
+                        type="date"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        label="Expiry date"
+                        style="max-width: 160px;"
+                      />
+                      <v-btn-toggle
+                        v-model="depletions[ingredient.foodId!].status"
+                        density="compact"
+                        variant="outlined"
+                        color="primary"
+                        mandatory
+                        class="ml-auto"
+                      >
+                        <v-btn value="ok" size="small">OK</v-btn>
+                        <v-btn value="low" size="small" color="warning">Low</v-btn>
+                        <v-btn value="out" size="small" color="error">Out</v-btn>
+                      </v-btn-toggle>
+                    </div>
+                    <!-- Row 2: location + category -->
+                    <div class="d-flex gap-2">
+                      <v-text-field
+                        v-model="depletions[ingredient.foodId!].location"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        label="Location (e.g. Fridge, Pantry shelf)"
+                        class="flex-grow-1"
+                      />
+                      <v-text-field
+                        v-model="depletions[ingredient.foodId!].category"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        label="Category (e.g. Dairy, Spices)"
+                        class="flex-grow-1"
+                      />
+                    </div>
+                  </div>
+                </template>
+              </v-list-item>
+            </v-list>
+          </template>
+        </template>
       </v-card-text>
 
       <v-card-actions>
@@ -122,6 +215,9 @@ interface RecipeIngredientRef {
 interface DepletionEntry {
   status: "ok" | "low" | "out";
   quantity: number | null;
+  expirationDate: string | null;
+  location: string | null;
+  category: string | null;
 }
 
 const props = defineProps<{
@@ -138,32 +234,56 @@ const emit = defineEmits<{
 const pantryApi = usePantryApi();
 const saving = ref(false);
 
-// depletions: key → { status, quantity }
 const depletions = ref<Record<string, DepletionEntry>>({});
+const newItemFoodIds = ref<Set<string>>(new Set());
 
-// On mount or when ingredients change, fetch pantry cross-ref to pre-fill quantities
+const existingIngredients = computed(() =>
+  props.ingredients.filter(ing => {
+    const key = ing.foodId || ing.referenceId;
+    return key && !newItemFoodIds.value.has(key);
+  }),
+);
+
+const newIngredients = computed(() =>
+  props.ingredients.filter(ing => {
+    const key = ing.foodId || ing.referenceId;
+    return key && newItemFoodIds.value.has(key);
+  }),
+);
+
 async function initDepletions() {
   const map: Record<string, DepletionEntry> = {};
   for (const ing of props.ingredients) {
     const key = ing.foodId || ing.referenceId;
-    map[key] = { status: "ok", quantity: null };
+    if (key) {
+      map[key] = { status: "ok", quantity: null, expirationDate: null, location: null, category: null };
+    }
   }
 
-  // Pre-fill from pantry
+  const newIds = new Set<string>();
+
   if (props.recipeSlug) {
     const { data } = await pantryApi.getRecipePantryIngredients(props.recipeSlug);
     if (data) {
       for (const row of data) {
         const key = row.food_id || row.reference_id;
         if (key && map[key] !== undefined) {
-          const pantryQty = row.pantry_items?.[0]?.quantity ?? null;
-          map[key].quantity = pantryQty;
+          if (row.pantry_items?.length > 0) {
+            // Pre-fill from existing pantry item
+            map[key].quantity = row.pantry_items[0].quantity ?? null;
+            map[key].expirationDate = row.pantry_items[0].expiration_date ?? null;
+          }
+          else {
+            // No existing pantry item — mark as new
+            newIds.add(key);
+          }
         }
       }
     }
   }
 
   depletions.value = map;
+  newItemFoodIds.value = newIds;
 }
 
 watchEffect(() => {
@@ -178,9 +298,12 @@ async function confirm() {
     .filter(ing => ing.foodId)
     .map(ing => ({
       foodId: ing.foodId!,
-      status: depletions.value[ing.foodId!]?.status || "ok",
+      status: depletions.value[ing.foodId!]?.status ?? "ok",
       quantity: depletions.value[ing.foodId!]?.quantity ?? null,
       unit: ing.unit ?? null,
+      expirationDate: depletions.value[ing.foodId!]?.expirationDate ?? null,
+      location: depletions.value[ing.foodId!]?.location ?? null,
+      category: depletions.value[ing.foodId!]?.category ?? null,
     }));
 
   if (deplList.length > 0) {

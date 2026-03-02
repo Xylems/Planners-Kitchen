@@ -76,6 +76,9 @@ class CookingCheckDepletion(MealieModel):
     status: str  # "out" | "low" | "ok"
     quantity: float | None = None
     unit: str | None = None
+    location: str | None = None
+    category: str | None = None
+    expiration_date: date | None = None
 
 
 class CookingCheckRequest(MealieModel):

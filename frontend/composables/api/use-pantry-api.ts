@@ -48,6 +48,9 @@ export interface CookingCheckDepletion {
   status: "out" | "low" | "ok";
   quantity?: number | null;
   unit?: string | null;
+  location?: string | null;
+  category?: string | null;
+  expirationDate?: string | null;
 }
 
 export interface CookingCheckRequest {
