@@ -195,15 +195,26 @@
             class="mb-3"
           />
 
-          <v-text-field
-            v-model="form.expirationDate"
-            label="Expiration Date"
-            type="date"
-            density="compact"
-            variant="outlined"
-            clearable
-            class="mb-4"
-          />
+          <v-menu v-model="expiryDateMenu" :close-on-content-click="false" location="bottom">
+            <template #activator="{ props: menuProps }">
+              <v-text-field
+                :model-value="formatExpiryDisplay(form.expirationDate)"
+                v-bind="menuProps"
+                label="Expiration Date"
+                density="compact"
+                variant="outlined"
+                readonly
+                clearable
+                class="mb-4"
+                @click:clear="form.expirationDate = null"
+              />
+            </template>
+            <v-date-picker
+              :model-value="strToDate(form.expirationDate)"
+              hide-header
+              @update:model-value="(d) => { form.expirationDate = dateToStr(d); expiryDateMenu = false; }"
+            />
+          </v-menu>
 
           <!-- Stock status -->
           <div class="text-body-2 text-medium-emphasis mb-2">Stock status</div>
@@ -243,6 +254,29 @@ import { useFoodStore } from "~/composables/store";
 import { useSearch } from "~/composables/use-search";
 
 const pantryApi = usePantryApi();
+
+// ── Date helpers ─────────────────────────────────────────────────────────────
+const expiryDateMenu = ref(false);
+
+function strToDate(s: string | null): Date | undefined {
+  if (!s) return undefined;
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function dateToStr(d: Date | null | undefined): string | null {
+  if (!d) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatExpiryDisplay(s: string | null): string {
+  if (!s) return "";
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString();
+}
 
 // Food store — same source used by recipe ingredient editor
 const foodStore = useFoodStore();

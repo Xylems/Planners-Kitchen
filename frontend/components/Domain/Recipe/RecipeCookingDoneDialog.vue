@@ -24,7 +24,7 @@
         </div>
 
         <template v-else>
-          <!-- ── Existing pantry items (qty+unit from pantry; recipe qty shown as context) ── -->
+          <!-- ── Existing pantry items ── -->
           <template v-if="existingIngredients.length > 0">
             <div class="text-overline text-medium-emphasis mb-1">
               In Your Pantry
@@ -57,24 +57,41 @@
                         label="Remaining"
                         style="max-width: 110px;"
                       />
-                      <!-- Editable pantry unit — pre-filled with pantry unit (or recipe unit). Changes saved back to pantry. -->
-                      <v-text-field
+                      <v-combobox
                         v-model="depletions[ingredient.foodId!].pantryUnit"
+                        :items="availableUnits"
                         density="compact"
                         variant="outlined"
                         hide-details
                         label="Unit"
-                        style="max-width: 90px;"
+                        style="max-width: 110px;"
                       />
-                      <v-text-field
-                        v-model="depletions[ingredient.foodId!].expirationDate"
-                        type="date"
-                        density="compact"
-                        variant="outlined"
-                        hide-details
-                        label="Expiry date"
-                        style="max-width: 160px;"
-                      />
+                      <!-- Date picker for expiry -->
+                      <v-menu
+                        v-model="openDatePickers[ingredient.foodId!]"
+                        :close-on-content-click="false"
+                        location="bottom"
+                      >
+                        <template #activator="{ props: menuProps }">
+                          <v-text-field
+                            :model-value="formatDate(depletions[ingredient.foodId!].expirationDate)"
+                            v-bind="menuProps"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            label="Expiry date"
+                            readonly
+                            clearable
+                            style="max-width: 160px;"
+                            @click:clear="depletions[ingredient.foodId!].expirationDate = null"
+                          />
+                        </template>
+                        <v-date-picker
+                          :model-value="strToDate(depletions[ingredient.foodId!].expirationDate)"
+                          hide-header
+                          @update:model-value="(d) => pickDate(ingredient.foodId!, d)"
+                        />
+                      </v-menu>
                       <v-btn-toggle
                         v-model="depletions[ingredient.foodId!].status"
                         density="compact"
@@ -130,20 +147,40 @@
                         label="Remaining"
                         style="max-width: 110px;"
                       />
-                      <span
-                        v-if="ingredient.unit"
-                        class="text-body-2 text-medium-emphasis"
-                        style="min-width: 40px;"
-                      >{{ ingredient.unit }}</span>
-                      <v-text-field
-                        v-model="depletions[ingredient.foodId!].expirationDate"
-                        type="date"
+                      <v-combobox
+                        v-model="depletions[ingredient.foodId!].pantryUnit"
+                        :items="availableUnits"
                         density="compact"
                         variant="outlined"
                         hide-details
-                        label="Expiry date"
-                        style="max-width: 160px;"
+                        label="Unit"
+                        style="max-width: 110px;"
                       />
+                      <v-menu
+                        v-model="openDatePickers[ingredient.foodId!]"
+                        :close-on-content-click="false"
+                        location="bottom"
+                      >
+                        <template #activator="{ props: menuProps }">
+                          <v-text-field
+                            :model-value="formatDate(depletions[ingredient.foodId!].expirationDate)"
+                            v-bind="menuProps"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            label="Expiry date"
+                            readonly
+                            clearable
+                            style="max-width: 160px;"
+                            @click:clear="depletions[ingredient.foodId!].expirationDate = null"
+                          />
+                        </template>
+                        <v-date-picker
+                          :model-value="strToDate(depletions[ingredient.foodId!].expirationDate)"
+                          hide-header
+                          @update:model-value="(d) => pickDate(ingredient.foodId!, d)"
+                        />
+                      </v-menu>
                       <v-btn-toggle
                         v-model="depletions[ingredient.foodId!].status"
                         density="compact"
@@ -159,12 +196,13 @@
                     </div>
                     <!-- Row 2: location + category -->
                     <div class="d-flex gap-2">
-                      <v-text-field
+                      <v-combobox
                         v-model="depletions[ingredient.foodId!].location"
+                        :items="availableLocations"
                         density="compact"
                         variant="outlined"
                         hide-details
-                        label="Location (e.g. Fridge, Pantry shelf)"
+                        label="Location"
                         class="flex-grow-1"
                       />
                       <v-text-field
@@ -241,7 +279,38 @@ const saving = ref(false);
 
 const depletions = ref<Record<string, DepletionEntry>>({});
 const newItemFoodIds = ref<Set<string>>(new Set());
+const openDatePickers = ref<Record<string, boolean>>({});
 
+const availableLocations = ref<string[]>([]);
+const availableUnits = ref<string[]>([]);
+
+// ── Date helpers ────────────────────────────────────────────────────────────
+function strToDate(s: string | null): Date | undefined {
+  if (!s) return undefined;
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function dateToStr(d: Date | null | undefined): string | null {
+  if (!d) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatDate(s: string | null): string {
+  if (!s) return "";
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString();
+}
+
+function pickDate(key: string, d: Date | null) {
+  depletions.value[key].expirationDate = dateToStr(d);
+  openDatePickers.value[key] = false;
+}
+
+// ── Computed ingredient lists ───────────────────────────────────────────────
 const existingIngredients = computed(() =>
   props.ingredients.filter(ing => {
     const key = ing.foodId || ing.referenceId;
@@ -256,36 +325,48 @@ const newIngredients = computed(() =>
   }),
 );
 
+// ── Initialise on open ──────────────────────────────────────────────────────
 async function initDepletions() {
-  // Set depletions immediately (before await) so the template has valid entries on first render
+  // Build map synchronously first so the template has valid entries immediately
   const map: Record<string, DepletionEntry> = {};
+  const pickers: Record<string, boolean> = {};
   for (const ing of props.ingredients) {
     const key = ing.foodId || ing.referenceId;
     if (key) {
-      // Default pantryUnit to the recipe unit so the field is pre-filled even before the API call
       map[key] = { status: "ok", quantity: null, expirationDate: null, location: null, category: null, pantryUnit: ing.unit ?? null };
+      pickers[key] = false;
     }
   }
   depletions.value = map;
+  openDatePickers.value = pickers;
   newItemFoodIds.value = new Set();
 
   if (!props.recipeSlug) return;
 
+  // Fetch pantry data in parallel
+  const [crossRef, allItems] = await Promise.all([
+    pantryApi.getRecipePantryIngredients(props.recipeSlug),
+    pantryApi.getPantryItems(),
+  ]);
+
+  // Populate available locations & units from all pantry items
+  if (allItems.data) {
+    availableLocations.value = [...new Set(allItems.data.map(i => i.location).filter((l): l is string => !!l))].sort();
+    availableUnits.value = [...new Set(allItems.data.map(i => i.unit).filter((u): u is string => !!u))].sort();
+  }
+
+  // Apply cross-ref data
   const newIds = new Set<string>();
-  const { data } = await pantryApi.getRecipePantryIngredients(props.recipeSlug);
-  if (data) {
-    for (const row of data) {
+  if (crossRef.data) {
+    for (const row of crossRef.data) {
       const key = row.food_id || row.reference_id;
       if (key && depletions.value[key] !== undefined) {
         if (row.pantry_items?.length > 0) {
-          // Pre-fill from existing pantry item — use reactive ref so Vue picks up changes
           depletions.value[key].quantity = row.pantry_items[0].quantity ?? null;
           depletions.value[key].expirationDate = row.pantry_items[0].expiration_date ?? null;
-          // Use pantry unit if set; keep recipe unit as default so user can correct it
           depletions.value[key].pantryUnit = row.pantry_items[0].unit ?? depletions.value[key].pantryUnit;
         }
         else {
-          // No existing pantry item — mark as new
           newIds.add(key);
         }
       }
@@ -301,6 +382,7 @@ watchEffect(() => {
   }
 });
 
+// ── Submit ──────────────────────────────────────────────────────────────────
 async function confirm() {
   saving.value = true;
   const deplList = props.ingredients
