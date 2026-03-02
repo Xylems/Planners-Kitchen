@@ -143,12 +143,15 @@
 
           <v-row dense>
             <v-col cols="6">
-              <v-text-field
+              <v-combobox
                 v-model="form.location"
+                :items="locations"
                 label="Location"
                 placeholder="Fridge, Freezer, Top Shelf…"
                 density="compact"
                 variant="outlined"
+                clearable
+                hide-details
               />
             </v-col>
             <v-col cols="6">
