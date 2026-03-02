@@ -341,8 +341,12 @@ const isAdminAndNotOwner = computed(() => {
 });
 const canDelete = computed(() => {
   const user = auth.user.value;
+  if (!user) return false;
   const recipe = recipeRef.value;
-  return user && recipe && (user.admin || user.id === recipe.userId);
+  // If the full recipe object isn't loaded (e.g. card view), allow delete —
+  // the menu is already gated by isOwnGroup and the API enforces authorization.
+  if (!recipe) return true;
+  return user.admin || user.id === recipe.userId;
 });
 
 // Get Default Menu Items Specified in Props
