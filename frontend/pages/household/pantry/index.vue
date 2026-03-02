@@ -155,12 +155,15 @@
               />
             </v-col>
             <v-col cols="6">
-              <v-text-field
+              <v-combobox
                 v-model="form.category"
+                :items="categories"
                 label="Category"
                 placeholder="Dairy, Produce, Spices…"
                 density="compact"
                 variant="outlined"
+                clearable
+                hide-details
               />
             </v-col>
           </v-row>
@@ -177,12 +180,15 @@
               />
             </v-col>
             <v-col cols="6">
-              <v-text-field
+              <v-combobox
                 v-model="form.unit"
+                :items="units"
                 label="Unit"
                 placeholder="cups, lbs, items…"
                 density="compact"
                 variant="outlined"
+                clearable
+                hide-details
               />
             </v-col>
           </v-row>
@@ -356,6 +362,16 @@ const locations = computed(() => {
 });
 
 const hasUnlocated = computed(() => items.value.some(i => !i.location));
+
+const categories = computed(() => {
+  const cats = new Set(items.value.map(i => i.category).filter((c): c is string => !!c));
+  return Array.from(cats).sort();
+});
+
+const units = computed(() => {
+  const us = new Set(items.value.map(i => i.unit).filter((u): u is string => !!u));
+  return Array.from(us).sort();
+});
 
 const filteredItems = computed(() => {
   if (activeTab.value === "all") return items.value;

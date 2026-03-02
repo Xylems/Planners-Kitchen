@@ -205,12 +205,13 @@
                         label="Location"
                         class="flex-grow-1"
                       />
-                      <v-text-field
+                      <v-combobox
                         v-model="depletions[ingredient.foodId!].category"
+                        :items="availableCategories"
                         density="compact"
                         variant="outlined"
                         hide-details
-                        label="Category (e.g. Dairy, Spices)"
+                        label="Category"
                         class="flex-grow-1"
                       />
                     </div>
@@ -283,6 +284,7 @@ const openDatePickers = ref<Record<string, boolean>>({});
 
 const availableLocations = ref<string[]>([]);
 const availableUnits = ref<string[]>([]);
+const availableCategories = ref<string[]>([]);
 
 // ── Date helpers ────────────────────────────────────────────────────────────
 function strToDate(s: string | null): Date | undefined {
@@ -353,6 +355,7 @@ async function initDepletions() {
   if (allItems.data) {
     availableLocations.value = [...new Set(allItems.data.map(i => i.location).filter((l): l is string => !!l))].sort();
     availableUnits.value = [...new Set(allItems.data.map(i => i.unit).filter((u): u is string => !!u))].sort();
+    availableCategories.value = [...new Set(allItems.data.map(i => i.category).filter((c): c is string => !!c))].sort();
   }
 
   // Apply cross-ref data
