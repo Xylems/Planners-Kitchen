@@ -51,8 +51,8 @@ jobs:
         run: |
           # nightly is always built (push or schedule)
           TAGS="${{ env.IMAGE }}:nightly"
-          # latest is only updated on direct push (not the nightly schedule)
-          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # latest is ONLY updated on manual workflow_dispatch — never on automatic push/schedule
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TAGS="$TAGS,${{ env.IMAGE }}:latest"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
