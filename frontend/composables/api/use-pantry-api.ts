@@ -47,6 +47,7 @@ export interface CookingCheckDepletion {
   foodId: string;
   status: "out" | "low" | "ok";
   quantity?: number | null;
+  unit?: string | null;
 }
 
 export interface CookingCheckRequest {

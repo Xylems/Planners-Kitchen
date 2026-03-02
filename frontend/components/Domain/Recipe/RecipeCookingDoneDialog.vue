@@ -180,6 +180,7 @@ async function confirm() {
       foodId: ing.foodId!,
       status: depletions.value[ing.foodId!]?.status || "ok",
       quantity: depletions.value[ing.foodId!]?.quantity ?? null,
+      unit: ing.unit ?? null,
     }));
 
   if (deplList.length > 0) {

@@ -75,6 +75,7 @@ class CookingCheckDepletion(MealieModel):
     food_id: UUID4
     status: str  # "out" | "low" | "ok"
     quantity: float | None = None
+    unit: str | None = None
 
 
 class CookingCheckRequest(MealieModel):

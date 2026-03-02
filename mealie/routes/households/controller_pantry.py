@@ -93,12 +93,26 @@ class PantryController(BaseCrudController):
 
     @router.post("/cooking-check", status_code=status.HTTP_200_OK)
     def cooking_check(self, data: CookingCheckRequest):
-        """Post-cooking ingredient check: mark pantry items as low or out."""
+        """Post-cooking ingredient check: mark pantry items as low or out, auto-creating if absent."""
         for depletion in data.depletions:
-            if depletion.status in ("low", "out"):
+            existing = self.pantry.get_by_food_id(depletion.food_id)
+            if not existing:
+                # Auto-create a new pantry item for this food
+                food = self.session.get(IngredientFoodModel, str(depletion.food_id))
+                if food:
+                    self.pantry.create({
+                        "name": food.name,
+                        "food_id": depletion.food_id,
+                        "quantity": depletion.quantity,
+                        "unit": depletion.unit,
+                        "is_low": depletion.status == "low",
+                        "is_out": depletion.status == "out",
+                        "household_id": self.household_id,
+                        "group_id": self.group_id,
+                        "last_updated": datetime.now(UTC),
+                    })
+            else:
                 self.pantry.mark_depleted(depletion.food_id, depletion.status, depletion.quantity)
-            elif depletion.status == "ok":
-                self.pantry.mark_depleted(depletion.food_id, "ok", depletion.quantity)
         self.session.commit()
         return {"message": "Pantry updated successfully"}
 
