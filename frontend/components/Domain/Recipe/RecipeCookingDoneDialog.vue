@@ -24,7 +24,7 @@
         </div>
 
         <template v-else>
-          <!-- ── Existing pantry items ── -->
+          <!-- ── Existing pantry items (qty+unit from pantry; recipe qty shown as context) ── -->
           <template v-if="existingIngredients.length > 0">
             <div class="text-overline text-medium-emphasis mb-1">
               In Your Pantry
@@ -57,11 +57,12 @@
                         label="Remaining"
                         style="max-width: 110px;"
                       />
+                      <!-- Show pantry unit (e.g. gallons) if available; fall back to recipe unit -->
                       <span
-                        v-if="ingredient.unit"
+                        v-if="depletions[ingredient.foodId!].pantryUnit || ingredient.unit"
                         class="text-body-2 text-medium-emphasis"
                         style="min-width: 40px;"
-                      >{{ ingredient.unit }}</span>
+                      >{{ depletions[ingredient.foodId!].pantryUnit || ingredient.unit }}</span>
                       <v-text-field
                         v-model="depletions[ingredient.foodId!].expirationDate"
                         type="date"
@@ -218,6 +219,7 @@ interface DepletionEntry {
   expirationDate: string | null;
   location: string | null;
   category: string | null;
+  pantryUnit: string | null;
 }
 
 const props = defineProps<{
@@ -256,7 +258,7 @@ async function initDepletions() {
   for (const ing of props.ingredients) {
     const key = ing.foodId || ing.referenceId;
     if (key) {
-      map[key] = { status: "ok", quantity: null, expirationDate: null, location: null, category: null };
+      map[key] = { status: "ok", quantity: null, expirationDate: null, location: null, category: null, pantryUnit: null };
     }
   }
 
@@ -272,6 +274,7 @@ async function initDepletions() {
             // Pre-fill from existing pantry item
             map[key].quantity = row.pantry_items[0].quantity ?? null;
             map[key].expirationDate = row.pantry_items[0].expiration_date ?? null;
+            map[key].pantryUnit = row.pantry_items[0].unit ?? null;
           }
           else {
             // No existing pantry item — mark as new

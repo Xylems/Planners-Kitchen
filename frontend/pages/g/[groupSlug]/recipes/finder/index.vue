@@ -407,6 +407,7 @@
                     :missing-tools="item.missingTools"
                     :disable-checkbox="loading"
                     :pantry-food-ids="pantrySelectedIdSet"
+                    :pantry-ok-food-ids="pantryOkFoodIds"
                     @add-food="addFood"
                     @remove-food="removeFood"
                     @add-tool="addTool"
@@ -436,6 +437,7 @@
                     :missing-tools="item.missingTools"
                     :disable-checkbox="loading"
                     :pantry-food-ids="pantrySelectedIdSet"
+                    :pantry-ok-food-ids="pantryOkFoodIds"
                     @add-food="addFood"
                     @remove-food="removeFood"
                     @add-tool="addTool"
@@ -666,6 +668,15 @@ export default defineNuxtComponent({
     // Reactive Set for template and RecipeSuggestion
     const pantrySelectedIdSet = computed<Set<string>>(() => new Set(pantrySelectedIds.value));
 
+    // Food IDs that are fully in-stock (not low, not out) — used to suppress "missing" label
+    const pantryOkFoodIds = computed<Set<string>>(() => {
+      const ids = new Set<string>();
+      for (const item of pantryItems.value) {
+        if (item.foodId && !item.isLow && !item.isOut) ids.add(item.foodId);
+      }
+      return ids;
+    });
+
     function togglePantryFood(food: IngredientFood) {
       if (pantrySelectedIds.value.includes(food.id)) {
         pantrySelectedIds.value = pantrySelectedIds.value.filter(id => id !== food.id);
@@ -837,6 +848,7 @@ export default defineNuxtComponent({
       pantryFoods,
       expiringPantryIds,
       pantrySelectedIdSet,
+      pantryOkFoodIds,
       useExpiringItems,
       togglePantryFood,
       selectAllPantry,

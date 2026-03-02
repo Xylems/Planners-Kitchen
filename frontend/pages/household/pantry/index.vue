@@ -17,6 +17,7 @@
     <v-tabs v-model="activeTab" color="primary" class="mb-4">
       <v-tab value="all">All</v-tab>
       <v-tab v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</v-tab>
+      <v-tab v-if="hasUnlocated" value="__no_location__">No Location</v-tab>
     </v-tabs>
 
     <!-- Loading -->
@@ -317,8 +318,11 @@ const locations = computed(() => {
   return Array.from(locs).sort();
 });
 
+const hasUnlocated = computed(() => items.value.some(i => !i.location));
+
 const filteredItems = computed(() => {
   if (activeTab.value === "all") return items.value;
+  if (activeTab.value === "__no_location__") return items.value.filter(i => !i.location);
   return items.value.filter(i => i.location === activeTab.value);
 });
 

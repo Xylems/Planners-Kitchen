@@ -61,12 +61,14 @@ interface Props {
   missingTools?: RecipeTool[] | null;
   disableCheckbox?: boolean;
   pantryFoodIds?: Set<string> | null;
+  pantryOkFoodIds?: Set<string> | null;
 }
 const props = withDefaults(defineProps<Props>(), {
   missingFoods: null,
   missingTools: null,
   disableCheckbox: false,
   pantryFoodIds: null,
+  pantryOkFoodIds: null,
 });
 
 const emit = defineEmits<{
@@ -83,13 +85,21 @@ const pantryMatchCount = computed(() => {
   const missingIds = new Set(props.missingFoods?.map((f) => f.id) ?? []);
   return [...props.pantryFoodIds].filter((id) => !missingIds.has(id)).length;
 });
+
+// Exclude foods that are fully in-stock in the pantry (ok status) from the missing list
+const effectiveMissingFoods = computed(() => {
+  if (!props.missingFoods) return null;
+  if (!props.pantryOkFoodIds?.size) return props.missingFoods;
+  return props.missingFoods.filter(f => !props.pantryOkFoodIds!.has(f.id));
+});
+
 const missingOrganizers = computed(() => [
   {
     type: "food",
-    show: props.missingFoods?.length,
+    show: effectiveMissingFoods.value?.length,
     icon: $globals.icons.foods,
-    items: props.missingFoods
-      ? props.missingFoods.map((food) => {
+    items: effectiveMissingFoods.value
+      ? effectiveMissingFoods.value.map((food) => {
           return reactive({ type: "food", item: food, selected: false } as Organizer);
         })
       : [],
