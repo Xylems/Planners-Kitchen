@@ -57,12 +57,15 @@
                         label="Remaining"
                         style="max-width: 110px;"
                       />
-                      <!-- Show pantry unit (e.g. gallons) if available; fall back to recipe unit -->
-                      <span
-                        v-if="depletions[ingredient.foodId!].pantryUnit || ingredient.unit"
-                        class="text-body-2 text-medium-emphasis"
-                        style="min-width: 40px;"
-                      >{{ depletions[ingredient.foodId!].pantryUnit || ingredient.unit }}</span>
+                      <!-- Editable pantry unit — pre-filled with pantry unit (or recipe unit). Changes saved back to pantry. -->
+                      <v-text-field
+                        v-model="depletions[ingredient.foodId!].pantryUnit"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        label="Unit"
+                        style="max-width: 90px;"
+                      />
                       <v-text-field
                         v-model="depletions[ingredient.foodId!].expirationDate"
                         type="date"
@@ -259,7 +262,8 @@ async function initDepletions() {
   for (const ing of props.ingredients) {
     const key = ing.foodId || ing.referenceId;
     if (key) {
-      map[key] = { status: "ok", quantity: null, expirationDate: null, location: null, category: null, pantryUnit: null };
+      // Default pantryUnit to the recipe unit so the field is pre-filled even before the API call
+      map[key] = { status: "ok", quantity: null, expirationDate: null, location: null, category: null, pantryUnit: ing.unit ?? null };
     }
   }
   depletions.value = map;
@@ -277,7 +281,8 @@ async function initDepletions() {
           // Pre-fill from existing pantry item — use reactive ref so Vue picks up changes
           depletions.value[key].quantity = row.pantry_items[0].quantity ?? null;
           depletions.value[key].expirationDate = row.pantry_items[0].expiration_date ?? null;
-          depletions.value[key].pantryUnit = row.pantry_items[0].unit ?? null;
+          // Use pantry unit if set; keep recipe unit as default so user can correct it
+          depletions.value[key].pantryUnit = row.pantry_items[0].unit ?? depletions.value[key].pantryUnit;
         }
         else {
           // No existing pantry item — mark as new
@@ -304,7 +309,7 @@ async function confirm() {
       foodId: ing.foodId!,
       status: depletions.value[ing.foodId!]?.status ?? "ok",
       quantity: depletions.value[ing.foodId!]?.quantity ?? null,
-      unit: ing.unit ?? null,
+      unit: depletions.value[ing.foodId!]?.pantryUnit ?? ing.unit ?? null,
       expirationDate: depletions.value[ing.foodId!]?.expirationDate ?? null,
       location: depletions.value[ing.foodId!]?.location ?? null,
       category: depletions.value[ing.foodId!]?.category ?? null,

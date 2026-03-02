@@ -32,8 +32,9 @@ class RepositoryPantry(HouseholdRepositoryGeneric[PantryItemRead, PantryItem]):
         status: str,
         quantity: float | None = None,
         expiration_date: date | None = None,
+        unit: str | None = None,
     ) -> None:
-        """Update pantry items with given food_id: set stock status, quantity and/or expiration date."""
+        """Update pantry items with given food_id: set stock status, quantity, unit and/or expiration date."""
         # Load ORM objects directly (avoids double-query via session.get + Pydantic intermediary)
         stmt = (
             select(self.model)
@@ -55,5 +56,7 @@ class RepositoryPantry(HouseholdRepositoryGeneric[PantryItemRead, PantryItem]):
                 db_item.quantity = quantity
             if expiration_date is not None:
                 db_item.expiration_date = expiration_date
+            if unit is not None:
+                db_item.unit = unit
             db_item.last_updated = datetime.now(UTC)
         self.session.commit()

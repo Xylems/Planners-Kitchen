@@ -116,7 +116,7 @@ class PantryController(BaseCrudController):
                     })
             else:
                 self.pantry.mark_depleted(
-                    depletion.food_id, depletion.status, depletion.quantity, depletion.expiration_date
+                    depletion.food_id, depletion.status, depletion.quantity, depletion.expiration_date, depletion.unit
                 )
         self.session.commit()
         return {"message": "Pantry updated successfully"}
