@@ -254,6 +254,7 @@ const newIngredients = computed(() =>
 );
 
 async function initDepletions() {
+  // Set depletions immediately (before await) so the template has valid entries on first render
   const map: Record<string, DepletionEntry> = {};
   for (const ing of props.ingredients) {
     const key = ing.foodId || ing.referenceId;
@@ -261,31 +262,31 @@ async function initDepletions() {
       map[key] = { status: "ok", quantity: null, expirationDate: null, location: null, category: null, pantryUnit: null };
     }
   }
+  depletions.value = map;
+  newItemFoodIds.value = new Set();
+
+  if (!props.recipeSlug) return;
 
   const newIds = new Set<string>();
-
-  if (props.recipeSlug) {
-    const { data } = await pantryApi.getRecipePantryIngredients(props.recipeSlug);
-    if (data) {
-      for (const row of data) {
-        const key = row.food_id || row.reference_id;
-        if (key && map[key] !== undefined) {
-          if (row.pantry_items?.length > 0) {
-            // Pre-fill from existing pantry item
-            map[key].quantity = row.pantry_items[0].quantity ?? null;
-            map[key].expirationDate = row.pantry_items[0].expiration_date ?? null;
-            map[key].pantryUnit = row.pantry_items[0].unit ?? null;
-          }
-          else {
-            // No existing pantry item — mark as new
-            newIds.add(key);
-          }
+  const { data } = await pantryApi.getRecipePantryIngredients(props.recipeSlug);
+  if (data) {
+    for (const row of data) {
+      const key = row.food_id || row.reference_id;
+      if (key && depletions.value[key] !== undefined) {
+        if (row.pantry_items?.length > 0) {
+          // Pre-fill from existing pantry item — use reactive ref so Vue picks up changes
+          depletions.value[key].quantity = row.pantry_items[0].quantity ?? null;
+          depletions.value[key].expirationDate = row.pantry_items[0].expiration_date ?? null;
+          depletions.value[key].pantryUnit = row.pantry_items[0].unit ?? null;
+        }
+        else {
+          // No existing pantry item — mark as new
+          newIds.add(key);
         }
       }
     }
   }
 
-  depletions.value = map;
   newItemFoodIds.value = newIds;
 }
 
