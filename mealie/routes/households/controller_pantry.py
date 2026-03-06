@@ -80,10 +80,12 @@ class PantryController(BaseCrudController):
                             "id": str(p.id),
                             "name": p.name,
                             "location": p.location,
+                            "category": p.category,
                             "quantity": p.quantity,
                             "unit": p.unit,
                             "is_low": p.is_low,
                             "is_out": p.is_out,
+                            "expiration_date": p.expiration_date.isoformat() if p.expiration_date else None,
                         }
                         for p in pantry_items
                     ],
